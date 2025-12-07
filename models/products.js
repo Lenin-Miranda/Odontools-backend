@@ -28,15 +28,44 @@ const productSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    // 🖼️ Sistema de múltiples imágenes
+    images: [
+      {
+        type: String,
+        trim: true,
+        validate: {
+          validator(value) {
+            return (
+              validator.isURL(value, {
+                protocols: ["http", "https"],
+                require_protocol: false,
+              }) ||
+              value.startsWith("/uploads/") ||
+              /^https?:\/\/.+/.test(value)
+            );
+          },
+          message: "Cada imagen debe ser una URL válida o ruta válida",
+        },
+      },
+    ],
+    // Imagen principal - primera del array o única
     image: {
       type: String,
       required: [true, "La imagen del producto es obligatoria"],
       trim: true,
       validate: {
         validator(value) {
-          return validator.isURL(value);
+          // Permitir URLs válidas o rutas que empiecen con http/https o rutas locales
+          return (
+            validator.isURL(value, {
+              protocols: ["http", "https"],
+              require_protocol: false,
+            }) ||
+            value.startsWith("/uploads/") ||
+            /^https?:\/\/.+/.test(value)
+          );
         },
-        message: "Debe ingresar una URL valida",
+        message: "Debe ingresar una URL válida o ruta de imagen válida",
       },
       default: "",
     },

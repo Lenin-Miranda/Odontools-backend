@@ -1,14 +1,29 @@
 const mongoose = require("mongoose");
 
-const SALE_STATUS = ["pending", "paid", "shipped", "completed", "cancelled"];
-const PAYMENT_METHODS = ["credit_card", "paypal", "cash", "bank_transfer"];
-
+const SALE_STATUS = [
+  "pendiente",
+  "confirmado",
+  "enviado",
+  "entregado",
+  "cancelado",
+];
+const PAYMENT_METHODS = ["cash", "bank_transfer"];
 const saleSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    bankAccountNumber: {
+      type: Number,
+      trim: true,
+      maxlength: 20,
+    },
+    accountName: {
+      type: String,
+      trim: true,
+      maxlength: 100,
     },
     products: [
       {
@@ -30,7 +45,7 @@ const saleSchema = new mongoose.Schema(
       required: true,
     },
     shippingAddress: { type: String, required: true },
-    status: { type: String, enum: SALE_STATUS, default: "pending" },
+    status: { type: String, enum: SALE_STATUS, default: "pendiente" },
     saleDate: { type: Date, default: Date.now },
   },
   { timestamps: true }

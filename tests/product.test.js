@@ -24,8 +24,12 @@ describe("Product API", () => {
     adminToken = loginRes.body.token;
   });
   afterAll(async () => {
-    await mongoose.connection.db.dropDatabase();
-    await mongoose.connection.close();
+    try {
+      await mongoose.connection.db.dropDatabase();
+      await mongoose.connection.close();
+    } catch (error) {
+      console.error("Error during afterAll cleanup:", error);
+    }
   });
 
   test("Debe obtener todos los productos", async () => {

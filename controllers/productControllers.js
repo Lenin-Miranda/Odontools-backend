@@ -42,19 +42,42 @@ exports.getProductsById = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
   try {
-    const {
+    console.log("🔍 Datos recibidos para crear producto:", req.body);
+    console.log("📁 Archivos recibidos:", req.files);
+    console.log("👤 Usuario:", req.user);
+
+    let {
       name,
       description,
       price,
       stock,
-      image,
       category,
       discount,
       isFavorite,
       reviews,
     } = req.body;
 
-    const requiredFields = { name, description, price, stock, image, category };
+    let mainImage = null;
+    let additionalImages = [];
+
+    // 🖼️ Procesar imagen principal
+    if (req.files && req.files.image && req.files.image[0]) {
+      mainImage = `${req.protocol}://${req.get("host")}/uploads/${
+        req.files.image[0].filename
+      }`;
+      console.log("📸 Imagen principal generada:", mainImage);
+    }
+
+    // 🖼️ Procesar imágenes adicionales
+    if (req.files && req.files.images) {
+      additionalImages = req.files.images.map(
+        (file) =>
+          `${req.protocol}://${req.get("host")}/uploads/${file.filename}`
+      );
+      console.log("📸 Imágenes adicionales generadas:", additionalImages);
+    }
+
+    const requiredFields = { name, description, price, stock, category };
     const missing = Object.entries(requiredFields)
       .filter(
         ([_, value]) => value === undefined || value === null || value === ""
@@ -62,6 +85,7 @@ exports.createProduct = async (req, res) => {
       .map(([key]) => key);
 
     if (missing.length > 0) {
+      console.log("❌ Campos faltantes:", missing);
       logger.warn("Faltan campos obligatorios para crear el producto");
       return res.status(400).json({
         success: false,
@@ -69,18 +93,39 @@ exports.createProduct = async (req, res) => {
       });
     }
 
+    if (!mainImage) {
+      console.log("❌ Falta imagen principal");
+      return res.status(400).json({
+        success: false,
+        message: "Debes proporcionar al menos una imagen principal",
+      });
+    }
+
     if (price < 0 || stock < 0) {
+      console.log("❌ Precio o stock negativos:", { price, stock });
       logger.warn("El precio y el stock no deben de ser negativos");
       return res.status(400).json({
         success: false,
         message: "El precio y el stock no deben de ser negativos",
       });
     }
-    const newProduct = await Product.create(req.body);
+
+    console.log("✅ Validaciones pasadas, creando producto...");
+
+    // Crear el producto con imagen principal + galería
+    const productData = {
+      ...req.body,
+      image: mainImage,
+      images: additionalImages,
+    };
+
+    const newProduct = await Product.create(productData);
+    console.log("✅ Producto creado exitosamente:", newProduct._id);
 
     res.status(201).json({ success: true, product: newProduct });
   } catch (error) {
-    console.error(`Error al crear producto: ${error}`);
+    console.error(`❌ Error completo al crear producto:`, error);
+    console.error(`❌ Stack trace:`, error.stack);
     logger.error(`Error al crear producto: ${error.message}`);
     res.status(500).json({ success: false, message: error.message });
   }
@@ -89,9 +134,43 @@ exports.createProduct = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
   try {
+    console.log("🔄 Actualizando producto:", req.params.id);
+    console.log("📁 Archivos recibidos:", req.files);
+
+    let updateData = { ...req.body };
+
+    // 🖼️ Actualizar imagen principal si se subió
+    if (req.files && req.files.image && req.files.image[0]) {
+      updateData.image = `${req.protocol}://${req.get("host")}/uploads/${
+        req.files.image[0].filename
+      }`;
+      console.log("📸 Nueva imagen principal:", updateData.image);
+    }
+
+    // 🖼️ Actualizar/agregar imágenes adicionales
+    if (req.files && req.files.images && req.files.images.length > 0) {
+      const newImages = req.files.images.map(
+        (file) =>
+          `${req.protocol}://${req.get("host")}/uploads/${file.filename}`
+      );
+
+      // Si ya tiene imágenes, agregar las nuevas; si no, crear array nuevo
+      const existingProduct = await Product.findById(req.params.id);
+      if (existingProduct && existingProduct.images) {
+        updateData.images = [...existingProduct.images, ...newImages];
+      } else {
+        updateData.images = newImages;
+      }
+      console.log("📸 Imágenes actualizadas:", updateData.images);
+    }
+
+    if (!req.files || Object.keys(req.files).length === 0) {
+      console.log("📝 Actualización sin cambio de imágenes");
+    }
+
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -102,8 +181,10 @@ exports.updateProduct = async (req, res) => {
         .json({ success: false, message: "Producto no encontrado" });
     }
 
+    console.log("✅ Producto actualizado exitosamente:", updatedProduct._id);
     res.status(200).json({ success: true, product: updatedProduct });
   } catch (error) {
+    console.error(`❌ Error al actualizar producto:`, error);
     logger.error(`Error al actualizar producto: ${error.message}`);
     res.status(500).json({ success: false, message: error.message });
   }
@@ -128,4 +209,54 @@ exports.deleteProduct = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
   return null;
+};
+
+// 🗑️ Eliminar una imagen específica de la galería
+exports.deleteProductImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { imageUrl } = req.body;
+
+    if (!imageUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "Debes proporcionar la URL de la imagen a eliminar",
+      });
+    }
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      logger.warn(`Producto no encontrado: ${id}`);
+      return res.status(404).json({
+        success: false,
+        message: "Producto no encontrado",
+      });
+    }
+
+    // No permitir eliminar la imagen principal si hay imágenes en la galería
+    if (imageUrl === product.image && product.images.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "No puedes eliminar la imagen principal. Primero establece otra como principal.",
+      });
+    }
+
+    // Eliminar de la galería
+    product.images = product.images.filter((img) => img !== imageUrl);
+    await product.save();
+
+    console.log("🗑️ Imagen eliminada de la galería:", imageUrl);
+    logger.info(`Imagen eliminada del producto ${id}`);
+
+    res.status(200).json({
+      success: true,
+      message: "Imagen eliminada exitosamente",
+      product,
+    });
+  } catch (error) {
+    logger.error(`Error al eliminar imagen: ${error.message}`);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };

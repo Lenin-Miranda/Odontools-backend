@@ -1,7 +1,6 @@
 const request = require("supertest");
 const mongoose = require("mongoose");
 const app = require("../server"); // importa la app sin listen()
-const Product = require("../models/products");
 
 describe("Cart API", () => {
   let adminToken;

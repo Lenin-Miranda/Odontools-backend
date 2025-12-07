@@ -5,15 +5,24 @@ const logger = require("../middlewares/logger.js");
 // Obtener el carrito del usuario
 exports.getCart = async (req, res) => {
   try {
-    const cart = await Cart.findOne({ user: req.user.id }).populate(
+    let cart = await Cart.findOne({ user: req.user.id }).populate(
       "items.product"
     );
+
+    // Si el usuario no tiene carrito, crear uno vacío automáticamente
     if (!cart) {
-      logger.warn(`Carrito no encontrado para el usuario: ${req.user.id}`);
-      return res
-        .status(404)
-        .json({ success: false, message: "Carrito no encontrado" });
+      logger.info(
+        `Creando carrito vacío para el nuevo usuario: ${req.user.id}`
+      );
+      cart = await Cart.create({
+        user: req.user.id,
+        items: [],
+      });
+      logger.info(
+        `Carrito creado exitosamente para el usuario: ${req.user.id}`
+      );
     }
+
     res.status(200).json({ success: true, cart });
   } catch (error) {
     logger.error(`Error al obtener el carrito: ${error.message}`);
@@ -72,23 +81,44 @@ exports.addToCart = async (req, res) => {
 exports.removeFromCart = async (req, res) => {
   try {
     const { productId } = req.params;
-    const cart = await Cart.findOne({ user: req.user.id });
+    let cart = await Cart.findOne({ user: req.user.id });
 
     if (!cart) {
-      logger.warn(`Carrito no encontrado para el usuario: ${req.user.id}`);
+      logger.warn(
+        `Carrito no encontrado para eliminar producto. Usuario: ${req.user.id}`
+      );
       return res
         .status(404)
-        .json({ success: false, message: "Carrito no encontrado" });
+        .json({
+          success: false,
+          message: "Carrito no encontrado. No hay productos para eliminar.",
+        });
     }
 
+    const initialLength = cart.items.length;
     cart.items = cart.items.filter(
       (item) => item.product.toString() !== productId
     );
+
+    // Verificar si se eliminó algún producto
+    if (cart.items.length === initialLength) {
+      logger.warn(
+        `Producto ${productId} no encontrado en el carrito del usuario ${req.user.id}`
+      );
+      return res.status(404).json({
+        success: false,
+        message: "Producto no encontrado en el carrito",
+      });
+    }
+
     await cart.save();
 
     // Hacer populate del producto antes de devolver la respuesta
     await cart.populate("items.product");
 
+    logger.info(
+      `Producto ${productId} eliminado del carrito del usuario ${req.user.id}`
+    );
     res.status(200).json({ success: true, cart });
   } catch (error) {
     logger.error(`Error al eliminar del carrito: ${error.message}`);
@@ -99,20 +129,29 @@ exports.removeFromCart = async (req, res) => {
 exports.increaseItemQuantity = async (req, res) => {
   try {
     const productId = req.params.productId || req.body.productId;
-    const cart = await Cart.findOne({ user: req.user.id }).populate(
+    let cart = await Cart.findOne({ user: req.user.id }).populate(
       "items.product"
     );
 
     if (!cart) {
+      logger.warn(
+        `Carrito no encontrado para aumentar cantidad. Usuario: ${req.user.id}`
+      );
       return res
         .status(404)
-        .json({ success: false, message: "Carrito no encontrado" });
+        .json({
+          success: false,
+          message: "Carrito no encontrado. Agrega productos primero.",
+        });
     }
 
     const itemIndex = cart.items.findIndex(
       (item) => item.product._id.toString() === productId
     );
     if (itemIndex === -1) {
+      logger.warn(
+        `Producto ${productId} no encontrado en el carrito del usuario ${req.user.id}`
+      );
       return res.status(404).json({
         success: false,
         message: "Producto no encontrado en el carrito",
@@ -137,20 +176,29 @@ exports.increaseItemQuantity = async (req, res) => {
 exports.decreaseItemQuantity = async (req, res) => {
   try {
     const productId = req.params.productId || req.body.productId;
-    const cart = await Cart.findOne({ user: req.user.id }).populate(
+    let cart = await Cart.findOne({ user: req.user.id }).populate(
       "items.product"
     );
 
     if (!cart) {
+      logger.warn(
+        `Carrito no encontrado para disminuir cantidad. Usuario: ${req.user.id}`
+      );
       return res
         .status(404)
-        .json({ success: false, message: "Carrito no encontrado" });
+        .json({
+          success: false,
+          message: "Carrito no encontrado. Agrega productos primero.",
+        });
     }
 
     const itemIndex = cart.items.findIndex(
       (item) => item.product._id.toString() === productId
     );
     if (itemIndex === -1) {
+      logger.warn(
+        `Producto ${productId} no encontrado en el carrito del usuario ${req.user.id}`
+      );
       return res.status(404).json({
         success: false,
         message: "Producto no encontrado en el carrito",
@@ -172,8 +220,6 @@ exports.decreaseItemQuantity = async (req, res) => {
     await cart.save();
     await cart.populate("items.product");
 
-    console.log("🛒 Carrito actualizado:", cart.items); // <-- línea añadida para depuración
-
     res.status(200).json({ success: true, cart });
   } catch (error) {
     logger.error(`Error al disminuir cantidad: ${error.message}`);
@@ -183,16 +229,21 @@ exports.decreaseItemQuantity = async (req, res) => {
 
 exports.clearCart = async (req, res) => {
   try {
-    const cart = await Cart.findOne({ user: req.user.id });
+    let cart = await Cart.findOne({ user: req.user.id });
+
+    // Si no existe el carrito, crear uno vacío
     if (!cart) {
-      logger.warn(`Carrito no encontrado para el usuario: ${req.user.id}`);
-      return res
-        .status(404)
-        .json({ success: false, message: "Carrito no encontrado" });
+      logger.info(`Creando carrito vacío para el usuario: ${req.user.id}`);
+      cart = await Cart.create({
+        user: req.user.id,
+        items: [],
+      });
+    } else {
+      // Si existe, vaciar los items
+      cart.items = [];
+      cart.markModified("items");
+      await cart.save();
     }
-    cart.items = [];
-    cart.markModified("items");
-    await cart.save();
 
     // Hacer populate del producto antes de devolver la respuesta
     const populatedCart = await Cart.findById(cart._id).populate(
