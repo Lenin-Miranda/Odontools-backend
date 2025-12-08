@@ -11,7 +11,11 @@ const cartRoutes = require("./routes/cartRoutes");
 const salesRoutes = require("./routes/saleRoutes");
 const { errorHandler } = require("./utils/errorHandler");
 
-dotenv.config();
+// Cargar variables de entorno solo si existe el archivo
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config();
+}
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -51,14 +55,20 @@ app.use("/api/sales", salesRoutes);
 app.use(errorHandler);
 
 if (process.env.NODE_ENV !== "test") {
+  // Iniciar servidor primero
+  app.listen(PORT, () => {
+    logger.info(`Servidor corriendo en puerto ${PORT}`);
+  });
+
+  // Conectar a MongoDB
   mongoose
     .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/odontools")
     .then(() => {
-      app.listen(PORT);
+      logger.info("Conectado a MongoDB exitosamente");
     })
     .catch((err) => {
       logger.error(`Error conectando a MongoDB: ${err.message}`);
-      process.exit(1);
+      // No hacer exit, dejar que el servidor siga corriendo
     });
 }
 
