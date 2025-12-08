@@ -22,7 +22,8 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://odontools-frontend.vercel.app", // Frontend en producción
+  "https://odontools-frontend.vercel.app",
+  "https://odontools-28dbh88q1-lenin9073-9038s-projects.vercel.app",
 ];
 
 app.use(
