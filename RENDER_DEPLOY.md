@@ -3,6 +3,7 @@
 ## ✅ Configuración Completada
 
 ### 1. Variables de Entorno Requeridas
+
 Configurar en Render Dashboard → Environment:
 
 ```
@@ -16,10 +17,12 @@ EMAIL_TO_ADMIN=admin@tudominio.com
 ```
 
 ### 2. CORS Configurado
+
 - ✅ Múltiples orígenes permitidos
 - ✅ Actualizar `allowedOrigins` en `server.js` con tu URL de frontend en producción
 
 **Actualizar línea 18 de server.js:**
+
 ```javascript
 const allowedOrigins = [
   "http://localhost:3000",
@@ -28,16 +31,19 @@ const allowedOrigins = [
 ```
 
 ### 3. Cookies en Producción
+
 - ✅ `sameSite: 'none'` en producción (cross-origin)
 - ✅ `secure: true` solo en HTTPS
 - ✅ `httpOnly: true` para seguridad
 
 ### 4. Build Command en Render
+
 ```
 npm install
 ```
 
 ### 5. Start Command en Render
+
 ```
 npm start
 ```
@@ -45,19 +51,23 @@ npm start
 ### 6. Configuración Adicional en Render
 
 #### Health Check Path
+
 ```
 /api/auth/profile
 ```
 
 #### Auto-Deploy
+
 - ✅ Activar auto-deploy desde rama `main`
 
 #### Environment
+
 - ✅ Node
 
 ## 📋 Pasos para Deploy
 
 1. **Push código a GitHub**
+
    ```bash
    git add .
    git commit -m "Preparado para deploy en Render"
@@ -65,16 +75,19 @@ npm start
    ```
 
 2. **Crear Web Service en Render**
+
    - Conectar repositorio GitHub
    - Tipo: Web Service
    - Build Command: `npm install`
    - Start Command: `npm start`
 
 3. **Configurar Variables de Entorno**
+
    - Copiar todas las variables del `.env`
    - Agregar en Render Dashboard
 
 4. **Configurar MongoDB**
+
    - Usar MongoDB Atlas (gratis)
    - Whitelist IP: `0.0.0.0/0` (todas las IPs)
    - Copiar connection string a `MONGO_URI`
@@ -87,6 +100,7 @@ npm start
 ## 🔍 Verificación Post-Deploy
 
 ### Test Endpoints:
+
 ```bash
 # Health check
 curl https://tu-api.onrender.com/api/auth/profile
@@ -99,6 +113,7 @@ curl -H "Origin: https://tu-frontend.vercel.app" \
 ```
 
 ### Logs en Tiempo Real:
+
 ```bash
 # En Render Dashboard → Logs
 # O CLI de Render
@@ -108,27 +123,35 @@ render logs -f
 ## ⚠️ Problemas Comunes
 
 ### 1. Error CORS
+
 **Solución:** Agregar URL del frontend a `allowedOrigins`
 
 ### 2. Cookies no funcionan
+
 **Solución:** Verificar:
+
 - Frontend usa `credentials: 'include'`
 - Backend tiene `sameSite: 'none'` y `secure: true`
 - Ambos están en HTTPS
 
 ### 3. MongoDB Connection Error
-**Solución:** 
+
+**Solución:**
+
 - Verificar IP whitelist en MongoDB Atlas
 - Verificar formato de `MONGO_URI`
 
 ### 4. Uploads no funcionan
-**Solución:** 
+
+**Solución:**
+
 - Render usa sistema de archivos efímero
 - Considerar usar AWS S3, Cloudinary, o DigitalOcean Spaces
 
 ## 🔄 Updates
 
 Para actualizar el backend:
+
 ```bash
 git add .
 git commit -m "Update: descripción"

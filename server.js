@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const logger = require("./middlewares/logger");
 
 const authRoutes = require("./routes/auth");
 const productRoutes = require("./routes/products");
@@ -56,12 +57,10 @@ if (process.env.NODE_ENV !== "test") {
       useUnifiedTopology: true,
     })
     .then(() => {
-      app.listen(PORT, () => {
-        console.log(`Servidor corriendo en el puerto ${PORT}`);
-      });
+      app.listen(PORT);
     })
     .catch((err) => {
-      console.error("Error conectando a MongoDB:", err);
+      logger.error(`Error conectando a MongoDB: ${err.message}`);
       process.exit(1);
     });
 }

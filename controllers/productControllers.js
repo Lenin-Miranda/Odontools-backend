@@ -42,10 +42,6 @@ exports.getProductsById = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
   try {
-    console.log("🔍 Datos recibidos para crear producto:", req.body);
-    console.log("📁 Archivos recibidos:", req.files);
-    console.log("👤 Usuario:", req.user);
-
     let {
       name,
       description,
@@ -65,7 +61,6 @@ exports.createProduct = async (req, res) => {
       mainImage = `${req.protocol}://${req.get("host")}/uploads/${
         req.files.image[0].filename
       }`;
-      console.log("📸 Imagen principal generada:", mainImage);
     }
 
     // 🖼️ Procesar imágenes adicionales
@@ -74,7 +69,6 @@ exports.createProduct = async (req, res) => {
         (file) =>
           `${req.protocol}://${req.get("host")}/uploads/${file.filename}`
       );
-      console.log("📸 Imágenes adicionales generadas:", additionalImages);
     }
 
     const requiredFields = { name, description, price, stock, category };
@@ -85,7 +79,6 @@ exports.createProduct = async (req, res) => {
       .map(([key]) => key);
 
     if (missing.length > 0) {
-      console.log("❌ Campos faltantes:", missing);
       logger.warn("Faltan campos obligatorios para crear el producto");
       return res.status(400).json({
         success: false,
@@ -94,7 +87,6 @@ exports.createProduct = async (req, res) => {
     }
 
     if (!mainImage) {
-      console.log("❌ Falta imagen principal");
       return res.status(400).json({
         success: false,
         message: "Debes proporcionar al menos una imagen principal",
@@ -102,15 +94,12 @@ exports.createProduct = async (req, res) => {
     }
 
     if (price < 0 || stock < 0) {
-      console.log("❌ Precio o stock negativos:", { price, stock });
       logger.warn("El precio y el stock no deben de ser negativos");
       return res.status(400).json({
         success: false,
         message: "El precio y el stock no deben de ser negativos",
       });
     }
-
-    console.log("✅ Validaciones pasadas, creando producto...");
 
     // Crear el producto con imagen principal + galería
     const productData = {
@@ -120,12 +109,9 @@ exports.createProduct = async (req, res) => {
     };
 
     const newProduct = await Product.create(productData);
-    console.log("✅ Producto creado exitosamente:", newProduct._id);
 
     res.status(201).json({ success: true, product: newProduct });
   } catch (error) {
-    console.error(`❌ Error completo al crear producto:`, error);
-    console.error(`❌ Stack trace:`, error.stack);
     logger.error(`Error al crear producto: ${error.message}`);
     res.status(500).json({ success: false, message: error.message });
   }
@@ -134,9 +120,6 @@ exports.createProduct = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
   try {
-    console.log("🔄 Actualizando producto:", req.params.id);
-    console.log("📁 Archivos recibidos:", req.files);
-
     let updateData = { ...req.body };
 
     // 🖼️ Actualizar imagen principal si se subió
@@ -144,7 +127,6 @@ exports.updateProduct = async (req, res) => {
       updateData.image = `${req.protocol}://${req.get("host")}/uploads/${
         req.files.image[0].filename
       }`;
-      console.log("📸 Nueva imagen principal:", updateData.image);
     }
 
     // 🖼️ Actualizar/agregar imágenes adicionales
@@ -161,11 +143,6 @@ exports.updateProduct = async (req, res) => {
       } else {
         updateData.images = newImages;
       }
-      console.log("📸 Imágenes actualizadas:", updateData.images);
-    }
-
-    if (!req.files || Object.keys(req.files).length === 0) {
-      console.log("📝 Actualización sin cambio de imágenes");
     }
 
     const updatedProduct = await Product.findByIdAndUpdate(
@@ -181,10 +158,8 @@ exports.updateProduct = async (req, res) => {
         .json({ success: false, message: "Producto no encontrado" });
     }
 
-    console.log("✅ Producto actualizado exitosamente:", updatedProduct._id);
     res.status(200).json({ success: true, product: updatedProduct });
   } catch (error) {
-    console.error(`❌ Error al actualizar producto:`, error);
     logger.error(`Error al actualizar producto: ${error.message}`);
     res.status(500).json({ success: false, message: error.message });
   }
@@ -247,7 +222,6 @@ exports.deleteProductImage = async (req, res) => {
     product.images = product.images.filter((img) => img !== imageUrl);
     await product.save();
 
-    console.log("🗑️ Imagen eliminada de la galería:", imageUrl);
     logger.info(`Imagen eliminada del producto ${id}`);
 
     res.status(200).json({

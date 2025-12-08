@@ -261,11 +261,9 @@ exports.editUserProfile = async (req, res) => {
     if (address !== undefined) user.address = address;
     if (biography !== undefined) user.biography = biography;
 
-    console.log("💾 Guardando cambios...");
     await user.save();
 
     logger.info(`Perfil de usuario editado: ${user.email} (ID: ${userId})`);
-    console.log("✅ Perfil actualizado exitosamente");
 
     res.status(200).json({
       message: "Perfil de usuario actualizado exitosamente",
@@ -281,8 +279,6 @@ exports.editUserProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error completo al editar perfil:", error);
-    console.error("❌ Stack trace:", error.stack);
     logger.error(`Error al editar el perfil del usuario: ${error.message}`);
     res.status(500).json({
       message: "Error al editar el perfil del usuario",
