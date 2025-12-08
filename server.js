@@ -24,6 +24,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://odontools-frontend.vercel.app",
   "https://odontools-28dbh88q1-lenin9073-9038s-projects.vercel.app",
+  "https://odontools.vercel.app",
 ];
 
 app.use(
@@ -67,13 +68,14 @@ if (process.env.NODE_ENV !== "test") {
   // Iniciar servidor primero
   app.listen(PORT, () => {
     logger.info(`Servidor corriendo en puerto ${PORT}`);
-    logger.info(`NODE_ENV: ${process.env.NODE_ENV || 'no configurado'}`);
+    logger.info(`NODE_ENV: ${process.env.NODE_ENV || "no configurado"}`);
   });
 
   // Conectar a MongoDB
-  const mongoUri = process.env.MONGODB_URI || "mongodb://localhost:27017/odontools";
+  const mongoUri =
+    process.env.MONGODB_URI || "mongodb://localhost:27017/odontools";
   logger.info(`Intentando conectar a MongoDB...`);
-  
+
   mongoose
     .connect(mongoUri)
     .then(() => {
