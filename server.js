@@ -22,7 +22,7 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://tu-frontend.vercel.app", // 🔹 Agrega tu dominio de producción
+  "https://odontools-frontend.vercel.app", // Frontend en producción
 ];
 
 app.use(
@@ -55,20 +55,32 @@ app.use("/api/sales", salesRoutes);
 app.use(errorHandler);
 
 if (process.env.NODE_ENV !== "test") {
+  // Verificar variables críticas
+  if (!process.env.MONGODB_URI) {
+    logger.error("⚠️ MONGODB_URI no está configurada!");
+  }
+  if (!process.env.JWT_SECRET) {
+    logger.error("⚠️ JWT_SECRET no está configurada!");
+  }
+
   // Iniciar servidor primero
   app.listen(PORT, () => {
     logger.info(`Servidor corriendo en puerto ${PORT}`);
+    logger.info(`NODE_ENV: ${process.env.NODE_ENV || 'no configurado'}`);
   });
 
   // Conectar a MongoDB
+  const mongoUri = process.env.MONGODB_URI || "mongodb://localhost:27017/odontools";
+  logger.info(`Intentando conectar a MongoDB...`);
+  
   mongoose
-    .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/odontools")
+    .connect(mongoUri)
     .then(() => {
-      logger.info("Conectado a MongoDB exitosamente");
+      logger.info("✅ Conectado a MongoDB exitosamente");
     })
     .catch((err) => {
-      logger.error(`Error conectando a MongoDB: ${err.message}`);
-      // No hacer exit, dejar que el servidor siga corriendo
+      logger.error(`❌ Error conectando a MongoDB: ${err.message}`);
+      logger.error(`Stack: ${err.stack}`);
     });
 }
 
