@@ -52,10 +52,7 @@ app.use(errorHandler);
 
 if (process.env.NODE_ENV !== "test") {
   mongoose
-    .connect("mongodb://localhost:27017/odontools", {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
+    .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/odontools")
     .then(() => {
       app.listen(PORT);
     })
