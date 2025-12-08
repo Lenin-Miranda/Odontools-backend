@@ -15,9 +15,21 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://tu-frontend.vercel.app", // 🔹 Agrega tu dominio de producción
+];
+
 app.use(
   cors({
-    origin: "http://localhost:3000", // Reemplaza con el origen de tu frontend
+    origin: function (origin, callback) {
+      // Permitir requests sin origin (como mobile apps o curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        return callback(new Error("CORS policy: Origin not allowed"), false);
+      }
+      return callback(null, true);
+    },
     optionsSuccessStatus: 200,
     credentials: true, // ✅ Permite enviar cookies
     methods: ["GET", "POST", "PUT", "DELETE"],

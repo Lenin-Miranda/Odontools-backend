@@ -85,8 +85,14 @@ const productSchema = new mongoose.Schema(
       min: [0, "El stock del producto no debe de ser negativo"],
     },
     discount: {
-      type: Boolean,
-      default: false,
+      type: Number,
+      default: 0,
+      min: [0, "El descuento no debe ser negativo"],
+      max: [100, "El descuento no debe exceder 100"],
+      validate: {
+        validator: Number.isInteger,
+        message: "El descuento debe ser un número entero",
+      },
     },
     category: {
       type: String,

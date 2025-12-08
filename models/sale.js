@@ -39,6 +39,7 @@ const saleSchema = new mongoose.Schema(
       },
     ],
     totalPrice: { type: Number, required: true },
+    shippingCost: { type: Number, default: 10 },
     paymentMethod: {
       type: String,
       enum: PAYMENT_METHODS,

@@ -4,6 +4,7 @@ const Cart = require("../models/cart");
 const Product = require("../models/products");
 const User = require("../models/user");
 const logger = require("../middlewares/logger.js");
+const PDFDocument = require("pdfkit");
 const { sendEmailToAdmin } = require("../services/sendEmailToAdmin.js");
 const { sendEmailToCustomer } = require("../services/sendEmailToCostumer.js");
 const {
@@ -17,7 +18,7 @@ const {
 
 exports.createSale = async (req, res) => {
   try {
-    const { paymentMethod, shippingAddress } = req.body;
+    const { paymentMethod, shippingAddress, shippingCost } = req.body;
 
     const cart = await Cart.findOne({ user: req.user.id }).populate(
       "items.product"
@@ -60,11 +61,16 @@ exports.createSale = async (req, res) => {
       });
     }
 
+    // Agregar costo de envío al total solo si el subtotal es menor a 100
+    const finalShippingCost = totalPrice < 100 ? shippingCost || 10 : 0;
+    totalPrice += finalShippingCost;
+
     const newSale = await Sale.create({
       user: req.user.id,
       products: saleProducts,
       status: "pendiente",
       totalPrice,
+      shippingCost: finalShippingCost,
       paymentMethod,
       shippingAddress,
     });
@@ -334,34 +340,308 @@ exports.exportSale = async (req, res) => {
         .json({ success: false, message: "Venta no encontrada" });
     }
 
-    // Generar el contenido del archivo de texto
-    let content = `Venta ID: ${sale._id}\n`;
-    content += `Usuario: ${sale.user.name} (${sale.user.email})\n`;
-    content += `Fecha de Venta: ${sale.saleDate.toISOString()}\n`;
-    content += `Estado: ${sale.status}\n`;
-    content += `Método de Pago: ${sale.paymentMethod}\n`;
-    content += `Dirección de Envío: ${sale.shippingAddress}\n`;
-    content += `\nProductos:\n`;
+    // Validar que el usuario existe
+    if (!sale.user) {
+      logger.error(`Usuario no encontrado para la venta: ${req.params.id}`);
+      return res
+        .status(404)
+        .json({ success: false, message: "Usuario no encontrado en la venta" });
+    }
 
-    sale.products.forEach((item, index) => {
-      content += `${index + 1}. ${item.product.name} - Cantidad: ${
-        item.quantity
-      }, Precio Unitario: $${item.priceAtSale.toFixed(
-        2
-      )}, Subtotal: $${item.subtotal.toFixed(2)}\n`;
-    });
+    // Filtrar productos que existen (por si alguno fue eliminado)
+    const validProducts = sale.products.filter((item) => item.product != null);
 
-    // Devolver el archivo de texto como descarga
+    if (validProducts.length === 0) {
+      logger.warn(`No hay productos válidos en la venta: ${req.params.id}`);
+      return res.status(400).json({
+        success: false,
+        message: "La venta no tiene productos válidos",
+      });
+    }
+
+    // Crear documento PDF
+    const doc = new PDFDocument({ margin: 50, size: "A4" });
+
+    // Configurar headers de respuesta
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=sale_${sale._id}.txt`
+      `attachment; filename=sale_${sale._id}.pdf`
     );
-    res.setHeader("Content-Type", "text/plain");
-    res.status(200).send(content);
-    logger.info(`Venta exportada exitosamente: ${req.params.id}`);
+    res.setHeader("Content-Type", "application/pdf");
+
+    // Pipe del PDF a la respuesta
+    doc.pipe(res);
+
+    // Manejar errores del stream
+    doc.on("error", (err) => {
+      logger.error(`Error en el stream del PDF: ${err.message}`);
+    });
+
+    // ========== ENCABEZADO ==========
+    doc
+      .fillColor("#2c3e50")
+      .fontSize(28)
+      .font("Helvetica-Bold")
+      .text("FACTURA DE VENTA", 50, 50, { align: "center" });
+
+    doc
+      .fontSize(10)
+      .fillColor("#7f8c8d")
+      .text(`ID: ${sale._id}`, 50, 90, { align: "center" });
+
+    // Línea decorativa
+    doc
+      .moveTo(50, 110)
+      .lineTo(545, 110)
+      .lineWidth(2)
+      .strokeColor("#3498db")
+      .stroke();
+
+    // ========== INFORMACIÓN DEL CLIENTE ==========
+    doc
+      .fontSize(14)
+      .fillColor("#2c3e50")
+      .font("Helvetica-Bold")
+      .text("Información del Cliente", 50, 130);
+
+    doc
+      .fontSize(11)
+      .fillColor("#34495e")
+      .font("Helvetica")
+      .text(`Nombre:`, 50, 155, { continued: true })
+      .font("Helvetica-Bold")
+      .text(` ${sale.user.name}`, { continued: false });
+
+    doc
+      .font("Helvetica")
+      .text(`Email:`, 50, 175, { continued: true })
+      .font("Helvetica-Bold")
+      .text(` ${sale.user.email}`, { continued: false });
+
+    // ========== DETALLES DE LA VENTA ==========
+    doc
+      .fontSize(14)
+      .fillColor("#2c3e50")
+      .font("Helvetica-Bold")
+      .text("Detalles de la Venta", 350, 130);
+
+    const saleDate = new Date(sale.saleDate).toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    doc
+      .fontSize(11)
+      .fillColor("#34495e")
+      .font("Helvetica")
+      .text(`Fecha:`, 350, 155, { continued: true })
+      .font("Helvetica-Bold")
+      .text(` ${saleDate}`, { continued: false });
+
+    // Estado con color
+    const statusColors = {
+      pendiente: "#f39c12",
+      confirmado: "#3498db",
+      enviado: "#9b59b6",
+      entregado: "#27ae60",
+      cancelado: "#e74c3c",
+    };
+
+    doc
+      .font("Helvetica")
+      .fillColor("#34495e")
+      .text(`Estado:`, 350, 175, { continued: true });
+
+    doc
+      .font("Helvetica-Bold")
+      .fillColor(statusColors[sale.status] || "#34495e")
+      .text(` ${sale.status.toUpperCase()}`, { continued: false });
+
+    doc
+      .fillColor("#34495e")
+      .font("Helvetica")
+      .text(`Método de Pago:`, 350, 195, { continued: true })
+      .font("Helvetica-Bold")
+      .text(` ${sale.paymentMethod}`, { continued: false });
+
+    // ========== DIRECCIÓN DE ENVÍO ==========
+    doc
+      .fontSize(14)
+      .fillColor("#2c3e50")
+      .font("Helvetica-Bold")
+      .text("Dirección de Envío", 50, 215);
+
+    doc
+      .fontSize(11)
+      .fillColor("#34495e")
+      .font("Helvetica")
+      .text(sale.shippingAddress, 50, 240, {
+        width: 500,
+        align: "left",
+      });
+
+    // Línea separadora
+    doc
+      .moveTo(50, 280)
+      .lineTo(545, 280)
+      .lineWidth(1)
+      .strokeColor("#bdc3c7")
+      .stroke();
+
+    // ========== TABLA DE PRODUCTOS ==========
+    doc
+      .fontSize(16)
+      .fillColor("#2c3e50")
+      .font("Helvetica-Bold")
+      .text("Productos", 50, 300);
+
+    let yPosition = 330;
+
+    // Encabezados de la tabla con fondo
+    doc.rect(50, yPosition, 495, 25).fillColor("#34495e").fill();
+
+    doc
+      .fontSize(11)
+      .fillColor("#ffffff")
+      .font("Helvetica-Bold")
+      .text("Producto", 60, yPosition + 7, { width: 200, continued: false })
+      .text("Cant.", 280, yPosition + 7, { width: 50, continued: false })
+      .text("Precio Unit.", 340, yPosition + 7, { width: 80, continued: false })
+      .text("Subtotal", 450, yPosition + 7, { width: 85, align: "right" });
+
+    yPosition += 30;
+
+    // Productos - usar solo productos válidos
+    validProducts.forEach((item, index) => {
+      // Fondo alternado
+      if (index % 2 === 0) {
+        doc
+          .rect(50, yPosition - 5, 495, 30)
+          .fillColor("#ecf0f1")
+          .fill();
+      }
+
+      doc
+        .fontSize(10)
+        .fillColor("#2c3e50")
+        .font("Helvetica")
+        .text(item.product.name, 60, yPosition, {
+          width: 200,
+          continued: false,
+        })
+        .text(item.quantity.toString(), 280, yPosition, {
+          width: 50,
+          continued: false,
+        })
+        .text(`$${item.priceAtSale.toFixed(2)}`, 340, yPosition, {
+          width: 80,
+          continued: false,
+        })
+        .font("Helvetica-Bold")
+        .text(`$${item.subtotal.toFixed(2)}`, 450, yPosition, {
+          width: 85,
+          align: "right",
+        });
+
+      yPosition += 30;
+
+      // Agregar nueva página si es necesario
+      if (yPosition > 700) {
+        doc.addPage();
+        yPosition = 50;
+      }
+    });
+
+    // Línea antes del subtotal
+    doc
+      .moveTo(50, yPosition + 10)
+      .lineTo(545, yPosition + 10)
+      .lineWidth(1)
+      .strokeColor("#bdc3c7")
+      .stroke();
+
+    // ========== SUBTOTAL Y COSTOS ==========
+    yPosition += 30;
+
+    // Calcular subtotal de productos (sin envío)
+    const subtotalProducts = validProducts.reduce(
+      (sum, item) => sum + item.subtotal,
+      0
+    );
+
+    doc
+      .fontSize(12)
+      .fillColor("#34495e")
+      .font("Helvetica")
+      .text("Subtotal Productos:", 350, yPosition, { continued: true })
+      .font("Helvetica-Bold")
+      .text(` $${subtotalProducts.toFixed(2)}`, { align: "right" });
+
+    yPosition += 25;
+
+    doc
+      .font("Helvetica")
+      .text("Costo de Envío:", 350, yPosition, { continued: true })
+      .font("Helvetica-Bold")
+      .text(` $${sale.shippingCost.toFixed(2)}`, { align: "right" });
+
+    yPosition += 35;
+
+    // ========== TOTAL ==========
+    doc
+      .rect(350, yPosition - 10, 195, 40)
+      .fillColor("#27ae60")
+      .fill();
+
+    doc
+      .fontSize(16)
+      .fillColor("#ffffff")
+      .font("Helvetica-Bold")
+      .text("TOTAL:", 360, yPosition, { continued: true })
+      .fontSize(18)
+      .text(` $${sale.totalPrice.toFixed(2)}`, { align: "right" });
+
+    // ========== PIE DE PÁGINA ==========
+    doc
+      .fontSize(10)
+      .fillColor("#95a5a6")
+      .font("Helvetica")
+      .text(
+        "Gracias por su compra. Para cualquier consulta, contáctenos.",
+        50,
+        yPosition + 80,
+        {
+          align: "center",
+          width: 495,
+        }
+      );
+
+    doc
+      .fontSize(8)
+      .fillColor("#bdc3c7")
+      .text(
+        `Documento generado el ${new Date().toLocaleDateString("es-ES")}`,
+        50,
+        750,
+        {
+          align: "center",
+        }
+      );
+
+    // Finalizar PDF
+    doc.end();
+
+    logger.info(`Venta exportada a PDF exitosamente: ${req.params.id}`);
   } catch (error) {
     logger.error(`Error al exportar la venta: ${error.message}`);
-    res.status(500).json({ success: false, message: error.message });
+
+    // Solo enviar respuesta de error si no se ha enviado nada aún
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: error.message });
+    }
   }
 };
 
