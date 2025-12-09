@@ -48,6 +48,7 @@ exports.createProduct = async (req, res) => {
       price,
       stock,
       category,
+      sku,
       discount,
       isFavorite,
       reviews,
@@ -66,7 +67,7 @@ exports.createProduct = async (req, res) => {
       additionalImages = req.files.images.map((file) => file.path); // Cloudinary URLs
     }
 
-    const requiredFields = { name, description, price, stock, category };
+    const requiredFields = { name, description, price, stock, category, sku };
     const missing = Object.entries(requiredFields)
       .filter(
         ([_, value]) => value === undefined || value === null || value === ""

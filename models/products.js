@@ -1,3 +1,4 @@
+const { required } = require("joi");
 const mongoose = require("mongoose");
 const validator = require("validator");
 
@@ -81,8 +82,15 @@ const productSchema = new mongoose.Schema(
     },
     stock: {
       type: Number,
+      default: 0,
       required: [true, "El stock del producto es obligatorio"],
       min: [0, "El stock del producto no debe de ser negativo"],
+    },
+    sku: {
+      type: String,
+      required: [true, "El stock del producto es obligatorio"],
+      unique: [true, "El SKU del prodcuto debe de ser unico"],
+      trim: true,
     },
     discount: {
       type: Number,
