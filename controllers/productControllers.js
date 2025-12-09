@@ -56,19 +56,14 @@ exports.createProduct = async (req, res) => {
     let mainImage = null;
     let additionalImages = [];
 
-    // 🖼️ Procesar imagen principal
+    // 🖼️ Procesar imagen principal (Cloudinary)
     if (req.files && req.files.image && req.files.image[0]) {
-      mainImage = `${req.protocol}://${req.get("host")}/uploads/${
-        req.files.image[0].filename
-      }`;
+      mainImage = req.files.image[0].path; // Cloudinary URL
     }
 
-    // 🖼️ Procesar imágenes adicionales
+    // 🖼️ Procesar imágenes adicionales (Cloudinary)
     if (req.files && req.files.images) {
-      additionalImages = req.files.images.map(
-        (file) =>
-          `${req.protocol}://${req.get("host")}/uploads/${file.filename}`
-      );
+      additionalImages = req.files.images.map((file) => file.path); // Cloudinary URLs
     }
 
     const requiredFields = { name, description, price, stock, category };
@@ -122,19 +117,14 @@ exports.updateProduct = async (req, res) => {
   try {
     let updateData = { ...req.body };
 
-    // 🖼️ Actualizar imagen principal si se subió
+    // 🖼️ Actualizar imagen principal si se subió (Cloudinary)
     if (req.files && req.files.image && req.files.image[0]) {
-      updateData.image = `${req.protocol}://${req.get("host")}/uploads/${
-        req.files.image[0].filename
-      }`;
+      updateData.image = req.files.image[0].path; // Cloudinary URL
     }
 
-    // 🖼️ Actualizar/agregar imágenes adicionales
+    // 🖼️ Actualizar/agregar imágenes adicionales (Cloudinary)
     if (req.files && req.files.images && req.files.images.length > 0) {
-      const newImages = req.files.images.map(
-        (file) =>
-          `${req.protocol}://${req.get("host")}/uploads/${file.filename}`
-      );
+      const newImages = req.files.images.map((file) => file.path); // Cloudinary URLs
 
       // Si ya tiene imágenes, agregar las nuevas; si no, crear array nuevo
       const existingProduct = await Product.findById(req.params.id);
