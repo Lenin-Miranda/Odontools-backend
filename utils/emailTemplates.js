@@ -100,6 +100,18 @@ exports.newOrderAdminEmail = (sale) => {
                         }</td>
                       </tr>
                       <tr>
+                        <td style="color: #666; font-size: 14px;"><strong>📱 Teléfono:</strong></td>
+                        <td style="color: #333; font-size: 14px;">${
+                          sale.user?.phone || "No proporcionado"
+                        }</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #666; font-size: 14px;"><strong>Fecha:</strong></td>
+                        <td style="color: #333; font-size: 14px;">${
+                          sale.user?.phone || "No proporcionado"
+                        }</td>
+                      </tr>
+                      <tr>
                         <td style="color: #666; font-size: 14px;"><strong>Fecha:</strong></td>
                         <td style="color: #333; font-size: 14px;">${formatDate(
                           sale.createdAt
@@ -294,6 +306,23 @@ exports.newOrderCustomerEmail = (sale) => {
                         )}</td>
                       </tr>
                     </table>
+                  </td>
+                </tr>
+
+                <!-- Contact Info -->
+                <tr>
+                  <td style="padding: 0 30px 30px 30px;">
+                    <div style="background-color: #f0f7ff; border-left: 4px solid #667eea; padding: 15px; border-radius: 4px;">
+                      <h3 style="margin: 0 0 10px 0; color: #667eea; font-size: 16px;">📞 ¿Dudas o cambios en tu pedido?</h3>
+                      <p style="margin: 0; color: #333; font-size: 14px; line-height: 1.6;">
+                        <strong>📱 Teléfono:</strong> ${
+                          process.env.ADMIN_PHONE || "Teléfono no disponible"
+                        }<br>
+                        <strong>📧 Email:</strong> ${
+                          process.env.ADMIN_EMAIL || "admin@odontools.com"
+                        }
+                      </p>
+                    </div>
                   </td>
                 </tr>
 
