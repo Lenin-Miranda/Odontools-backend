@@ -100,7 +100,7 @@ exports.newOrderAdminEmail = (sale) => {
                         }</td>
                       </tr>
                       <tr>
-                        <td style="color: #666; font-size: 14px;"><strong>📱 Teléfono:</strong></td>
+                        <td style="color: #666; font-size: 14px;"><strong> Teléfono:</strong></td>
                         <td style="color: #333; font-size: 14px;">${
                           sale.user?.phone || "No proporcionado"
                         }</td>
