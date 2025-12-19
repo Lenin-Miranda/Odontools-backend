@@ -25,6 +25,7 @@ const allowedOrigins = [
   "https://odontools-frontend.vercel.app",
   "https://odontools-28dbh88q1-lenin9073-9038s-projects.vercel.app",
   "https://odontools.vercel.app",
+  "https://odontools-dfksm8jfq-lenin9073-9038s-projects.vercel.app",
 ];
 
 app.use(
