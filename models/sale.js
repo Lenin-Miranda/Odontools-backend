@@ -8,6 +8,12 @@ const SALE_STATUS = [
   "cancelado",
 ];
 const PAYMENT_METHODS = ["cash", "bank_transfer"];
+const SHIPPING_TYPES = [
+  { type: "Cargotrans", label: "Cargotrans 24-48 horas", cost: 0 },
+  { type: "Estandar", label: "Envio Estandar 24 horas", cost: 150 },
+  { type: "Express", label: "Envio Express 1-2 horas", cost: 300 },
+];
+
 const saleSchema = new mongoose.Schema(
   {
     user: {
@@ -39,7 +45,13 @@ const saleSchema = new mongoose.Schema(
       },
     ],
     totalPrice: { type: Number, required: true },
-    shippingCost: { type: Number, default: 10 },
+
+    shippingType: {
+      type: String,
+      enum: SHIPPING_TYPES.map((s) => s.type),
+      required: true,
+    },
+    shippingCost: { type: Number, required: true },
     paymentMethod: {
       type: String,
       enum: PAYMENT_METHODS,

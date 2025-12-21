@@ -82,12 +82,15 @@ exports.loginUser = async (req, res) => {
     logger.info(`Usuario logueado: ${email}`);
 
     // ✅ Enviar token SOLO en cookie HttpOnly segura
-    res.cookie("token", token, {
-      httpOnly: true, // No accesible desde JavaScript del navegador
-      secure: process.env.NODE_ENV === "production", // Solo HTTPS en producción
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", // 'none' para cross-origin en producción
-      maxAge: 6 * 24 * 60 * 60 * 1000, // 6 días en milisegundos
-    });
+    // Forzar secure y sameSite para máxima compatibilidad móvil en producción
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production" ? true : false, // Siempre true en producción
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", // Siempre 'none' en producción
+      maxAge: 6 * 24 * 60 * 60 * 1000,
+    };
+    logger.info(`Set-Cookie options: ${JSON.stringify(cookieOptions)}`);
+    res.cookie("token", token, cookieOptions);
 
     // Solo devolver información del usuario, NO el token
     res.json({

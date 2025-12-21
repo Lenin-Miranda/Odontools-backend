@@ -58,13 +58,16 @@ describe("Sales API", () => {
       .post("/api/sales")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
-        paymentMethod: "credit_card",
+        paymentMethod: "cash",
         shippingAddress: "123 Test St, Test City",
+        shippingType: "Estandar",
       });
 
     expect(res.statusCode).toBe(201);
     expect(res.body).toHaveProperty("sale");
-    expect(res.body.sale).toHaveProperty("total", 100);
+    expect(res.body.sale).toHaveProperty("shippingType", "Estandar");
+    expect(res.body.sale).toHaveProperty("shippingCost", 150);
+    expect(res.body.sale).toHaveProperty("totalPrice", 250);
   });
 
   test("Debe obtener todas las ventas", async () => {

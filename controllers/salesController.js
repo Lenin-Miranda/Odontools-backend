@@ -18,7 +18,8 @@ const {
 
 exports.createSale = async (req, res) => {
   try {
-    const { paymentMethod, shippingAddress, shippingCost } = req.body;
+    const { paymentMethod, shippingAddress, shippingType } = req.body;
+    const { SHIPPING_TYPES } = require("../models/sale");
 
     const cart = await Cart.findOne({ user: req.user.id }).populate(
       "items.product"
@@ -61,8 +62,17 @@ exports.createSale = async (req, res) => {
       });
     }
 
-    // Agregar costo de envío al total solo si el subtotal es menor a 100
-    const finalShippingCost = totalPrice < 100 ? shippingCost || 10 : 0;
+    // Buscar el tipo de envío seleccionado
+    const selectedShipping = SHIPPING_TYPES.find(
+      (s) => s.type === shippingType
+    );
+    if (!selectedShipping) {
+      return res.status(400).json({
+        success: false,
+        message: "Tipo de envío no válido.",
+      });
+    }
+    const finalShippingCost = selectedShipping.cost;
     totalPrice += finalShippingCost;
 
     const newSale = await Sale.create({
@@ -70,6 +80,7 @@ exports.createSale = async (req, res) => {
       products: saleProducts,
       status: "pendiente",
       totalPrice,
+      shippingType,
       shippingCost: finalShippingCost,
       paymentMethod,
       shippingAddress,
@@ -85,18 +96,34 @@ exports.createSale = async (req, res) => {
 
     logger.info(`Venta creada exitosamente: ${newSale._id}`);
 
-    // Enviar email de notificación al admin con template HTML
+    // Enviar email de notificación al admin con detalles de envío
     try {
-      const adminEmailData = newOrderAdminEmail(populatedSale);
+      const shippingTypeLabel = populatedSale.shippingType
+        ? require("../models/sale").SHIPPING_TYPES.find(
+            (s) => s.type === populatedSale.shippingType
+          )?.label || populatedSale.shippingType
+        : "";
+      const adminEmailData = newOrderAdminEmail({
+        ...populatedSale.toObject(),
+        shippingTypeLabel,
+      });
       await sendEmailToAdmin(adminEmailData.subject, adminEmailData.html);
       logger.info("Email enviado al admin exitosamente");
     } catch (emailError) {
       logger.error(`Error al enviar email al admin: ${emailError.message}`);
     }
 
-    // Enviar email de confirmación al cliente con template HTML
+    // Enviar email de confirmación al cliente con detalles de envío
     try {
-      const customerEmailData = newOrderCustomerEmail(populatedSale);
+      const shippingTypeLabel = populatedSale.shippingType
+        ? require("../models/sale").SHIPPING_TYPES.find(
+            (s) => s.type === populatedSale.shippingType
+          )?.label || populatedSale.shippingType
+        : "";
+      const customerEmailData = newOrderCustomerEmail({
+        ...populatedSale.toObject(),
+        shippingTypeLabel,
+      });
       await sendEmailToCustomer(
         populatedSale.user.email,
         customerEmailData.subject,
