@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const Sale = require("../models/sale");
+const { Sale, SHIPPING_TYPES } = require("../models/sale");
 const Cart = require("../models/cart");
 const Product = require("../models/products");
 const User = require("../models/user");
@@ -19,7 +19,6 @@ const {
 exports.createSale = async (req, res) => {
   try {
     const { paymentMethod, shippingAddress, shippingType } = req.body;
-    const { SHIPPING_TYPES } = require("../models/sale");
 
     const cart = await Cart.findOne({ user: req.user.id }).populate(
       "items.product"

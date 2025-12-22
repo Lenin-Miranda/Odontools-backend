@@ -26,7 +26,7 @@ const saleSchema = new mongoose.Schema(
       trim: true,
       maxlength: 20,
     },
-    accountName: {
+    BankAccountName: {
       type: String,
       trim: true,
       maxlength: 100,
@@ -64,4 +64,7 @@ const saleSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Sale", saleSchema);
+module.exports = {
+  Sale: mongoose.model("Sale", saleSchema),
+  SHIPPING_TYPES,
+};
