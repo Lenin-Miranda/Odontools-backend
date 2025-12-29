@@ -38,7 +38,8 @@ exports.createSale = async (req, res) => {
     for (const item of cart.items) {
       const product = item.product;
       const quantity = item.quantity;
-
+      const discount =
+        typeof product.discount === "number" ? product.discount : 0;
       // Verificar stock disponible pero NO descontar aún (se descontará al confirmar pago)
       if (product.stock < quantity) {
         logger.warn(`Stock insuficiente para el producto: ${product._id}`);
@@ -48,7 +49,12 @@ exports.createSale = async (req, res) => {
         });
       }
 
-      const priceAtSale = product.price;
+      // Calcular precio con descuento si aplica
+      let priceAtSale = product.price;
+      if (discount > 0) {
+        priceAtSale = priceAtSale * (1 - discount / 100);
+      }
+
       const subtotal = priceAtSale * quantity;
       totalPrice += subtotal;
 

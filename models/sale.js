@@ -7,11 +7,11 @@ const SALE_STATUS = [
   "entregado",
   "cancelado",
 ];
-const PAYMENT_METHODS = ["cash", "bank_transfer"];
+const PAYMENT_METHODS = ["cash", "transfer"];
 const SHIPPING_TYPES = [
   { type: "Cargotrans", label: "Cargotrans 24-48 horas", cost: 0 },
-  { type: "Estandar", label: "Envio Estandar 24 horas", cost: 150 },
-  { type: "Express", label: "Envio Express 1-2 horas", cost: 300 },
+  { type: "Estandar", label: "Envio Estandar 24 horas", cost: 4 },
+  { type: "Express", label: "Envio Express 1-2 horas", cost: 8 },
 ];
 
 const saleSchema = new mongoose.Schema(

@@ -191,7 +191,7 @@ exports.newOrderAdminEmail = (sale) => {
         </table>
       </body>
       </html>
-    `,
+      `,
   };
 };
 
@@ -220,6 +220,40 @@ exports.newOrderCustomerEmail = (sale) => {
     .join("");
 
   const orderId = sale._id.toString().slice(-6);
+
+  // Datos bancarios para transferencia
+  const bankDetails = `
+    <div style="background-color: #fffbe6; border-left: 4px solid #ffc107; padding: 18px; border-radius: 6px; margin-bottom: 20px; margin-top: 20px;">
+      <h3 style="margin: 0 0 10px 0; color: #b8860b; font-size: 17px;">💸 Datos para Transferencia Bancaria</h3>
+      <div style="font-size: 14px; color: #333; line-height: 1.7;">
+        <b>BAC (US$)</b><br/>
+        Dólares<br/>
+        <b>369257886</b><br/>
+        Nombre: Cristofher Munguia
+        <hr style="border: none; border-top: 1px dashed #ccc; margin: 10px 0;"/>
+        <b>BAC (C$)</b><br/>
+        Córdobas<br/>
+        <b>368895207</b><br/>
+        🖋 Cuenta a nombre de Cristofher Munguia
+        <hr style="border: none; border-top: 1px dashed #ccc; margin: 10px 0;"/>
+        <b>LAFISE (U$)</b><br/>
+        Dólares<br/>
+        <b>130213176</b><br/>
+        🖋 Cuenta a nombre de Cristofher Munguía
+        <hr style="border: none; border-top: 1px dashed #ccc; margin: 10px 0;"/>
+        <b>LAFISE (C$)</b><br/>
+        Córdobas<br/>
+        <b>133000756</b><br/>
+        🖋 Cuenta a nombre de Cristofher Munguia
+        <hr style="border: none; border-top: 1px dashed #ccc; margin: 10px 0;"/>
+        <b>BANPRO (U$)</b><br/>
+        Dólares<br/>
+        <b>10024010019675</b><br/>
+        🖋 Cuenta a nombre de Cristofher Munguia
+      </div>
+      <div style="margin-top: 10px; color: #b8860b; font-size: 13px;">Por favor, envía el comprobante de pago para procesar tu orden.</div>
+    </div>
+  `;
 
   return {
     subject: `✅ Orden Recibida #${orderId} - Odontools`,
@@ -335,23 +369,36 @@ exports.newOrderCustomerEmail = (sale) => {
                   </td>
                 </tr>
 
-                <!-- Footer -->
+
+                <!-- Order Info -->
                 <tr>
-                  <td style="padding: 20px; background-color: #f8f9fa; text-align: center; border-radius: 0 0 8px 8px;">
-                    <p style="margin: 0 0 10px 0; color: #333; font-size: 14px;">
-                      ¿Tienes alguna pregunta?
-                    </p>
-                    <p style="margin: 0; color: #666; font-size: 12px;">
-                      Contáctanos: ${
-                        process.env.ADMIN_EMAIL || "support@odontools.com"
-                      }
-                    </p>
-                    <p style="margin: 15px 0 0 0; color: #999; font-size: 11px;">
-                      © ${new Date().getFullYear()} Odontools. Todos los derechos reservados.
-                    </p>
+                  <td style="padding: 0 30px 30px 30px;">
+                    <table width="100%" cellpadding="8" cellspacing="0" style="background-color: #f8f9fa; border-radius: 6px;">
+                      <tr>
+                        <td style="color: #666; font-size: 14px;"><strong>📍 Envío a:</strong></td>
+                        <td style="color: #333; font-size: 14px; text-align: right;">
+                          ${sale.shippingAddress}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #666; font-size: 14px;"><strong>💳 Método de pago:</strong></td>
+                        <td style="color: #333; font-size: 14px; text-align: right;">
+                          ${sale.paymentMethod}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #666; font-size: 16px; padding-top: 12px; border-top: 2px solid #dee2e6;"><strong>💰 TOTAL:</strong></td>
+                        <td style="color: #667eea; font-size: 20px; font-weight: bold; text-align: right; padding-top: 12px; border-top: 2px solid #dee2e6;">
+                          ${formatCurrency(sale.totalPrice)}</td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
-
+                <!-- Bank Details for Transferencia -->
+                ${
+                  sale.paymentMethod &&
+                  sale.paymentMethod.toLowerCase().includes("transfer")
+                    ? bankDetails
+                    : ""
+                }
               </table>
             </td>
           </tr>
@@ -362,9 +409,7 @@ exports.newOrderCustomerEmail = (sale) => {
   };
 };
 
-/**
- * Email al cliente cuando su orden es confirmada
- */
+// ...existing code...
 exports.orderConfirmedCustomerEmail = (sale) => {
   const orderId = sale._id.toString().slice(-6);
 
